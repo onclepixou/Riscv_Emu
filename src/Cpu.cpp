@@ -76,8 +76,8 @@ void Cpu::initRegisters(){
     m_registers[2] = m_memory->LastAddr() - 3;
 
     // Set PC to entry point
-    //m_pc = m_entryPoint;
-    m_pc = 0x10144;
+    m_pc = m_entryPoint;
+    //m_pc = 0x10144;
 }
 
 void Cpu::AttachMemory(Memory* mem){
@@ -219,8 +219,7 @@ void Cpu::Start(){
 
 
         CpuState(nextInstr);
-        if( m_pc > 0x10198)
-            std::cin.get();
+        std::cin.get();
     }
 
 

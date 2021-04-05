@@ -33,6 +33,10 @@ int32_t DecoderOutput::SextImmB(){
     return (int32_t)sext(imm, 12);
 }
 
+int32_t DecoderOutput::SextImmU(){
+
+    return (int32_t)imm;
+}
 
 std::map <uint8_t, InstructionInfo > OpExtensionIList(){
 

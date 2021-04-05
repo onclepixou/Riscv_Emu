@@ -499,8 +499,7 @@ void ExecutionCore::I_BranchInstr(DecoderOutput executeInput){
 
 void ExecutionCore::I_AUIPC(DecoderOutput executeInput){
 
-    m_reg[executeInput.rd] = *m_pc + executeInput.imm;
-    std::cout << " >> " << Tracer::registerName.at(executeInput.rd) << " = " << *m_pc + executeInput.imm << std::endl;
+    x(executeInput.rd, Pc() + executeInput.SextImmU());
     return;
 }   
 
