@@ -41,6 +41,10 @@ struct DecoderOutput{
     uint32_t imm;
 
     DecoderOutput();
+
+    int32_t SextImmI();
+    int32_t SextImmJ();
+    int32_t SextImmB();
 };
 
 // List of operations per extension

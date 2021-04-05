@@ -19,6 +19,18 @@ class ExecutionCore{
         void Execute(DecoderOutput executeInput);
 
     private : 
+
+        // Pc access
+        void SetPc(uint32_t offset);
+        uint32_t Pc() const;
+
+        // Register access (unsigned and signed)
+        uint32_t ux(uint8_t reg) const;
+        int32_t sx(uint8_t reg) const;
+        void  x(uint8_t reg, uint32_t val);
+
+        // Memory Access
+        Memory& Mem();
     
         // I instructions
         void InitExecuteI();
@@ -32,7 +44,9 @@ class ExecutionCore{
         void I_BranchInstr(DecoderOutput executeInput);     
         void I_AUIPC(DecoderOutput executeInput);           
         void I_LUI(DecoderOutput executeInput);             
-        void I_JAL(DecoderOutput executeInput);     
+        void I_JAL(DecoderOutput executeInput); 
+
+
 
     private : 
 

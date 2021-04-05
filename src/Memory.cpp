@@ -93,4 +93,8 @@ bool Memory::WriteChunk(void* data, size_t base, size_t nbelem, size_t elemsize)
     return true;
 }
 
+uint32_t Memory::LastAddr() const{
+
+    return GetMemSize() - 1;
+}
 

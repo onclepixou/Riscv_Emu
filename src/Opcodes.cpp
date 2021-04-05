@@ -1,4 +1,5 @@
 #include "Opcodes.h"
+#include "utils.h"
 
 InstructionInfo::InstructionInfo(){
 
@@ -15,6 +16,21 @@ InstructionInfo::InstructionInfo(InstructionType type_, ExtensionModule extensio
 DecoderOutput::DecoderOutput(){
 
     info = InstructionInfo();
+}
+
+int32_t DecoderOutput::SextImmI(){
+
+    return (int32_t)sext(imm, 11);
+}
+
+int32_t DecoderOutput::SextImmJ(){
+
+    return (int32_t)sext(imm, 20);
+}
+
+int32_t DecoderOutput::SextImmB(){
+
+    return (int32_t)sext(imm, 12);
 }
 
 

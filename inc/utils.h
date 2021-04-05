@@ -3,6 +3,7 @@
 
 #include <cstdint>
 
-int32_t sext(uint32_t val, uint8_t msb);
+// msb must be the position of the msb (from 0 to range)
+uint32_t sext(uint32_t val, uint8_t msb);
 
 #endif

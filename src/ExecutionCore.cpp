@@ -1,7 +1,11 @@
 #include "ExecutionCore.h"
 
 #include "utils.h"
+#include "Tracer.h"
+
 #include <stdexcept>
+#include <iostream>
+
 
  ExecutionCore::ExecutionCore(uint32_t* pc, uint32_t* reg) : m_pc(pc), m_reg(reg), m_mem(nullptr){
 
@@ -9,13 +13,65 @@
 
  }
 
- void ExecutionCore::AttachMemory(Memory* mem){
+void ExecutionCore::SetPc(uint32_t offset){
+
+    *m_pc = offset;
+}
+
+uint32_t ExecutionCore::Pc() const{
+
+    return *m_pc;
+}
+
+uint32_t ExecutionCore::ux(uint8_t reg) const{
+
+    if(reg > 31){
+
+        std::runtime_error("Register out of bound for read");
+    }
+
+    return m_reg[reg];
+}
+
+int32_t ExecutionCore::sx(uint8_t reg) const{
+
+    if(reg > 31){
+
+        std::runtime_error("Register out of bound for read");
+    }
+
+    return (int32_t)m_reg[reg];
+}
+
+void  ExecutionCore::x(uint8_t reg, uint32_t val){
+
+    if(reg == 0){
+
+        // x0 is read only
+        return;
+    }
+
+    if(reg > 31){
+
+        std::runtime_error("Register out of bound for write");
+    }
+
+    m_reg[reg] = val;
+    return;
+}
+
+Memory& ExecutionCore::Mem(){
+
+    return *m_mem;
+}
+
+void ExecutionCore::AttachMemory(Memory* mem){
 
      m_mem = mem;
      return;
- }
+}
 
- void ExecutionCore::Execute(DecoderOutput executeInput){
+void ExecutionCore::Execute(DecoderOutput executeInput){
 
     EXEC fp;
 
@@ -33,7 +89,7 @@
             break;
     }
 
- }
+}
 
 
 /* Execution of I extension instructions */
@@ -132,7 +188,7 @@ void ExecutionCore::I_RegisterInstr(DecoderOutput executeInput){
 
         default : 
 
-            throw std::runtime_error("Found unknown instruction dureing execution");
+            throw std::runtime_error("Found unknown instruction during execution");
             break;            
 
     }
@@ -143,38 +199,63 @@ void ExecutionCore::I_RegisterInstr(DecoderOutput executeInput){
 
 void ExecutionCore::I_LoadInstr(DecoderOutput executeInput){
 
+    int32_t offset;
+    uint32_t addr_fetched;
+    uint32_t value_fetched;
+
     switch(executeInput.funct3){
 
         case 0x0 : 
 
             // LB
-            //uint32_t addressToFetch = m_reg[executeInput.rs1] + sext(executeInput.imm & 0xFF , 7);
+            offset = executeInput.SextImmI();
+            addr_fetched = ux(executeInput.rs1) + offset;
+            value_fetched = Mem()[addr_fetched] & 0xFF ;
+            x(executeInput.rd, sext(value_fetched, 7)); // A TESTER
             break;
 
         case 0x1 : 
 
             //LH
+            offset = executeInput.SextImmI();
+            addr_fetched = ux(executeInput.rs1) + offset;
+            value_fetched = Mem()[addr_fetched] & 0xFFFF ;
+            x(executeInput.rd, sext(value_fetched, 17)); // A TESTER
             break;
 
         case 0x2 : 
 
             // LW
+            offset = executeInput.SextImmI();
+            addr_fetched = ux(executeInput.rs1) + offset;
+            value_fetched = Mem()[addr_fetched];
+            x(executeInput.rd, value_fetched);          // A TESTER
             break;
 
         case 0x4 : 
 
             // LBU
+            offset = executeInput.SextImmI();
+            addr_fetched = ux(executeInput.rs1) + offset;
+            value_fetched = Mem()[addr_fetched] & 0xFF ;
+            x(executeInput.rd, value_fetched); // A TESTER
             break;
 
         case 0x5 : 
 
             // LHU
+            offset = executeInput.SextImmI();
+            addr_fetched = ux(executeInput.rs1) + offset;
+            value_fetched = Mem()[addr_fetched] & 0xFFFF ;
+            x(executeInput.rd, value_fetched); // A TESTER
             break;
 
         default :
 
             break;
     }
+
+    std::cout << "loaded value " << std::dec << value_fetched << std::endl;
 
     return;
 }  
@@ -187,7 +268,7 @@ void ExecutionCore::I_FenceInstr(DecoderOutput executeInput){
 
 void ExecutionCore::I_ImmediateInstr(DecoderOutput executeInput){
 
-    int32_t imm = sext(executeInput.imm, 11);
+    int32_t imm = executeInput.SextImmI();
     uint8_t shiftType = executeInput.imm >> 5;
 
     switch(executeInput.funct3){
@@ -231,7 +312,7 @@ void ExecutionCore::I_ImmediateInstr(DecoderOutput executeInput){
         case 0x1 : 
 
             // SLLI
-            m_reg[executeInput.rd] = m_reg[executeInput.rs1] <<  ( imm & 0x1F );
+            m_reg[executeInput.rd] = m_reg[executeInput.rs1] <<  ( executeInput.imm & 0x1F );
             break;
 
         case 0x5 : 
@@ -239,13 +320,13 @@ void ExecutionCore::I_ImmediateInstr(DecoderOutput executeInput){
             if(shiftType == 0x0){
 
                 // SRLI
-                m_reg[executeInput.rd] = m_reg[executeInput.rs1] >>  ( imm & 0x1F );
+                m_reg[executeInput.rd] = m_reg[executeInput.rs1] >>  ( executeInput.imm & 0x1F );
             }
 
             if(shiftType == 0x20){
 
                 // SRAI
-                m_reg[executeInput.rd] = ((int32_t)m_reg[executeInput.rs1] ) >>  ( imm & 0x1F );
+                m_reg[executeInput.rd] = ((int32_t)m_reg[executeInput.rs1] ) >>  ( executeInput.imm & 0x1F );
             }
 
             break;
@@ -260,35 +341,185 @@ void ExecutionCore::I_ImmediateInstr(DecoderOutput executeInput){
 
 void ExecutionCore::I_JALR(DecoderOutput executeInput){
 
+    uint32_t t = Pc();
+    int32_t offset =  executeInput.SextImmI(); 
+    SetPc( ( ux( executeInput.rs1 ) + offset) &~1 );
+
+    if(executeInput.rd == 0){
+
+        executeInput.rd = 1;
+    }
+
+    x(executeInput.rd, t);
     return;
 }   
 
 void ExecutionCore::I_SyscallInstr(DecoderOutput executeInput){
+
+    if(executeInput.funct3 == 0){
+
+        if(executeInput.imm == 0 ){
+
+            // ECALL
+            std::cout << "PERFORMING ECALL" << std::endl;
+            return;
+        }
+
+        if(executeInput.imm == 1){
+
+            //EBREAK;
+            std::cout << "PERFORMING EBREAK" << std::endl;
+            return;
+        }
+    }
+
+    else{
+
+        throw std::runtime_error("CsrXXX instructions are not yet supported");
+    }
 
     return;
 }
 
 void ExecutionCore::I_StoreInstr(DecoderOutput executeInput){
 
+    int32_t offset = executeInput.SextImmI();
+    uint32_t dest_addr;
+    uint32_t value_stored;
+
+
+    switch(executeInput.funct3){
+
+        case 0x0 : 
+
+            //SB
+            dest_addr = ux(executeInput.rs1) + offset;
+            value_stored = ux(executeInput.rs2)  & 0xFF;
+            Mem()[dest_addr] = value_stored;
+            break;
+
+        case 0x1 : 
+
+            //SH
+            dest_addr = ux(executeInput.rs1) + offset;
+            value_stored = ux(executeInput.rs2) & 0xFFFF;
+            Mem()[dest_addr] = value_stored;
+            break;
+
+        case 0x2 : 
+
+            //SW
+            dest_addr = ux(executeInput.rs1) + offset;
+            value_stored = ux(executeInput.rs2);
+            Mem()[dest_addr] = value_stored;
+            break;
+
+        default : 
+
+            break;
+    }
+
+    std::cout << "Stored value " << value_stored << " at addr " << std::hex << dest_addr << "( " <<  ux(executeInput.rs1)  << " + " << offset <<  ")" << std::endl;
     return;
 } 
 
 void ExecutionCore::I_BranchInstr(DecoderOutput executeInput){
+
+    int32_t offset = sext(executeInput.imm, 12);
+
+    switch(executeInput.funct3){
+
+        case 0x0 : 
+
+            // BEQ
+            if( ux(executeInput.rs1) == ux(executeInput.rs2) ){
+
+                SetPc(Pc() + offset - 4);
+            }
+
+            break;
+
+        case 0x1 : 
+
+            // BNE
+            if( ux(executeInput.rs1) != ux(executeInput.rs2) ){
+
+                SetPc(Pc() + offset - 4);
+            }
+
+            break;
+
+        case 0x4 : 
+
+            // BLT
+            if( sx(executeInput.rs1 ) <= sx(executeInput.rs2 ) ){
+
+                SetPc(Pc() + offset - 4);
+            }
+
+            break;
+
+        case 0x5 : 
+
+            // BGE
+            if( sx(executeInput.rs1 ) >= sx(executeInput.rs2 ) ){
+
+                SetPc(Pc() + offset - 4);
+            }
+
+            break;
+
+        case 0x6 : 
+
+            // BLTU
+            if( ux(executeInput.rs1 ) <= ux(executeInput.rs2 )  ){
+
+                SetPc(Pc() + offset - 4);
+            }
+
+            break;
+
+        case 0x7 : 
+
+            // BGEU
+            if( ux(executeInput.rs1) >= ux(executeInput.rs2 ) ){
+
+                SetPc(Pc() + offset - 4);
+            }
+
+            break;
+
+        default : 
+
+            break;
+    }
 
     return;
 }  
 
 void ExecutionCore::I_AUIPC(DecoderOutput executeInput){
 
+    m_reg[executeInput.rd] = *m_pc + executeInput.imm;
+    std::cout << " >> " << Tracer::registerName.at(executeInput.rd) << " = " << *m_pc + executeInput.imm << std::endl;
     return;
 }   
 
 void ExecutionCore::I_LUI(DecoderOutput executeInput){
 
+    m_reg[executeInput.rd] = executeInput.imm;
     return;
 }   
 
 void ExecutionCore::I_JAL(DecoderOutput executeInput){
+
+    int32_t offset = sext(executeInput.imm, 20);
+
+    if(executeInput.rd == 0){
+        executeInput.rd = 1;
+    }
+
+    x(executeInput.rd, Pc() + 4);
+    SetPc(Pc() + offset - 4 );
 
     return;
 }         

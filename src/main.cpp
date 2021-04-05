@@ -13,7 +13,7 @@ int main(int argc, char** argv){
         Cpu myCpu("I");
         Memory myMemory(128 * 1024 *1024);
         myCpu.AttachMemory(&myMemory);
-        myCpu.LoadElf("tes");
+        myCpu.LoadElf("simple");
         myCpu.SetTraceActivated(true);
         myCpu.Start();
 

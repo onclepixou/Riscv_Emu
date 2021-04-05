@@ -20,6 +20,8 @@ class Memory{
 
         bool WriteChunk(void* data, size_t base, size_t nbelem, size_t elemsize);
 
+        uint32_t LastAddr() const; 
+
     private : 
 
         void EraseMemory();

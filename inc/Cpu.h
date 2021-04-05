@@ -20,6 +20,7 @@ class Cpu{
 
         Cpu(std::string Extensions);
         ~Cpu();
+        void CpuState(uint32_t instr) const;
 
         uint32_t x(uint8_t reg) const;
         const std::map <uint8_t, InstructionInfo >& ValidOpCodes() const;
@@ -27,10 +28,11 @@ class Cpu{
         bool LoadElf(std::string filename);
         void SetTraceActivated(bool status);
         void Start();
-
+        
     private : 
 
         uint32_t VirtualtoPhysicalAddress(uint32_t addr) const;
+        void initRegisters();
 
     private : 
 

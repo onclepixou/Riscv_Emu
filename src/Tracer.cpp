@@ -14,7 +14,7 @@ const std::map<uint8_t, std::string> Tracer::registerName = {
     {5,  "t0"},
     {6,  "t1"},
     {7,  "t2"},
-    {8,  "fp"},
+    {8,  "s0"},
     {9,  "s1"},
     {10, "a0"},
     {11, "a1"},
@@ -173,7 +173,13 @@ void Tracer::PrintII(DecoderOutput decoded)const{
         mnemonic = II_mnemonics.at(token);
     }
 
-    std::cout << mnemonic << " " << registerName.at(decoded.rd) << ", " << registerName.at(decoded.rs1) << ", " << sext(decoded.imm, 11) << std::endl;
+    if( ( mnemonic == "LW" ) || ( mnemonic == "LH" ) || ( mnemonic == "LB" ) || ( mnemonic == "JALR" ) ) {
+
+        std::cout << mnemonic << " " << registerName.at(decoded.rd) << ", " << std::dec << decoded.SextImmI() << "(" << registerName.at(decoded.rs1) << ")" <<  std::endl;
+        return;
+    }
+
+    std::cout  << mnemonic << " " << registerName.at(decoded.rd) << ", " << registerName.at(decoded.rs1) << ", " << std::dec <<  decoded.SextImmI()  << std::endl;
     return;
 }
 
@@ -193,7 +199,7 @@ void Tracer::PrintIS(DecoderOutput decoded)const{
         mnemonic = IS_mnemonics.at(decoded.funct3);
     }
 
-    std::cout << mnemonic << " " << registerName.at(decoded.rs2) << ", " << sext(decoded.imm, 11) << "(" << registerName.at(decoded.rs1) << ")" <<  std::endl;
+    std::cout << mnemonic << " " << registerName.at(decoded.rs2) << ", " << std::dec << decoded.SextImmI() << "(" << registerName.at(decoded.rs1) << ")" <<  std::endl;
     return;
 }
 
@@ -217,7 +223,7 @@ void Tracer::PrintIB(DecoderOutput decoded)const{
         mnemonic = IB_mnemonics.at(decoded.funct3);
     }
 
-    std::cout << mnemonic << " " << registerName.at(decoded.rs1) << ", " << registerName.at(decoded.rs2) << ", " << sext(decoded.imm, 12) <<  std::endl;
+    std::cout << mnemonic << " " << registerName.at(decoded.rs1) << ", " << registerName.at(decoded.rs2) << ", " <<  std::hex << decoded.SextImmB() <<  std::endl;
     return;
 }
 
